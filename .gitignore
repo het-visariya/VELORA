@@ -53,6 +53,3 @@ Screenshot*.jpg
 # Keep only specific source images
 !Frontend/src/assets/*.png
 
-# === Package Lock Files (keep for reproducibility but exclude from reviews) ===
-backend/package-lock.json
-Frontend/package-lock.json
