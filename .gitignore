@@ -44,9 +44,15 @@ backend/public/models/*.fbx
 backend/public/models/*.glb
 backend/public/uploads/*
 
-# === Screenshots ===
+# === Screenshots & Assets ===
+Screenshot*.png
+Screenshot*.jpg
 *.png
 *.jpg
 *.jpeg
 # Keep only specific source images
 !Frontend/src/assets/*.png
+
+# === Package Lock Files (keep for reproducibility but exclude from reviews) ===
+backend/package-lock.json
+Frontend/package-lock.json
