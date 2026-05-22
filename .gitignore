@@ -1,0 +1,52 @@
+# === Dependencies ===
+node_modules/
+backend/node_modules/
+Frontend/node_modules/
+
+# === Environment & Secrets ===
+.env
+backend/.env
+Frontend/.env
+backend/.env.local
+Frontend/.env.local
+
+# === Build Output ===
+dist/
+backend/dist/
+Frontend/dist/
+
+# === Logs ===
+*.log
+backend-*.err.log
+backend-*.out.log
+frontend-*.err.log
+frontend-*.out.log
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE & Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Temp Files ===
+_ul
+tmp/
+temp/
+
+# === 3D Models (Large binary files - add your own) ===
+backend/public/models/*.fbx
+backend/public/models/*.glb
+backend/public/uploads/*
+
+# === Screenshots ===
+*.png
+*.jpg
+*.jpeg
+# Keep only specific source images
+!Frontend/src/assets/*.png
