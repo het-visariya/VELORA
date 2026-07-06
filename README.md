@@ -1,163 +1,455 @@
-# 👗 Velora - AI Powered Fashion Platform
+# 👗 VELORA – AI-Powered Virtual Fashion Platform
 
-> Building the future of personalized fashion through AI, intelligent recommendations, and seamless shopping experiences.
+> An AI-powered fashion platform that enables users to virtually try on clothing, organize their digital wardrobe, receive personalized fashion recommendations, and make smarter shopping decisions through an immersive and intelligent experience.
 
-Velora is a full-stack fashion platform designed to make discovering and shopping for fashion more personalized, intuitive, and engaging. Instead of simply browsing products, users will be able to interact with AI-powered features that help them discover outfits, receive recommendations, and enjoy a smarter shopping experience.
-
-This repository contains the backend services powering the Velora ecosystem, including authentication, product management, AI integrations, media handling, and scalable REST APIs.
-
----
-
-## 🚀 Vision
-
-Fashion is personal, and finding the right style shouldn't feel overwhelming.
-
-Velora aims to simplify the shopping journey by combining modern web technologies with AI to deliver a more intelligent, personalized, and user-friendly experience for everyone.
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
+![Express](https://img.shields.io/badge/Express.js-API-black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Backend%20as%20a%20Service-3ECF8E?logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)
+![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render)
+![Status](https://img.shields.io/badge/Status-Live-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
 
-## ✨ Current Features
+# 🌐 Live Deployment
 
-- 🔐 Secure User Authentication & Authorization
-- 👤 User Profile Management
-- 🛍️ Product Management APIs
-- 📦 Category & Inventory Support
-- 🖼️ Image Uploads using Cloudinary
-- 🤖 AI Integration (OpenAI & Google Gemini)
-- 📧 Email Notifications
-- 🛡️ Input Validation & Rate Limiting
-- ⚡ RESTful API Architecture
-- 🗄️ PostgreSQL Database Integration
+### 🎨 Frontend (Vercel)
+
+🔗 https://velora-kq5yjjmd9-het-pravin-visariyas-projects.vercel.app/
 
 ---
 
-## 🛠️ Tech Stack
+### ⚙️ Backend API (Render)
 
-### Frontend
+🔗 https://velora-h0r9.onrender.com
+
+---
+
+# 📖 Project Overview
+
+VELORA is a full-stack AI-powered fashion platform built to redefine the online shopping experience by combining virtual fashion technology, intelligent recommendations, and wardrobe management into one seamless ecosystem.
+
+Instead of relying only on product images and size charts, users can explore fashion more interactively by visualizing outfits, managing their personal wardrobe, and discovering styles tailored to their preferences.
+
+The platform bridges the gap between customers and fashion brands by combining an intuitive frontend, scalable backend services, and a cloud-hosted PostgreSQL database through Supabase to deliver a seamless and personalized shopping experience.
+
+---
+
+# 🎯 Problem Statement
+
+Online fashion shopping still faces several challenges:
+
+- Customers cannot visualize how clothes might look on them.
+- High return rates due to incorrect purchasing decisions.
+- Difficulty managing purchased clothing.
+- Lack of personalized recommendations.
+- Time-consuming outfit selection.
+- Fragmented shopping experiences across different brands.
+
+These problems increase operational costs for brands while reducing customer satisfaction.
+
+---
+
+# 💡 Solution
+
+VELORA addresses these challenges by creating an intelligent fashion ecosystem that combines AI, personalization, and modern web technologies.
+
+The platform enables users to:
+
+- Organize their digital wardrobe.
+- Explore fashion collections.
+- Receive AI-driven recommendations.
+- Build outfits.
+- Experience interactive shopping.
+- Reduce uncertainty before purchasing.
+- Make better fashion decisions.
+
+---
+
+# ✨ Key Features
+
+## 👤 User Features
+
+- User Authentication
+- Secure Login & Registration
+- Personal Dashboard
+- Digital Wardrobe
+- Outfit Management
+- Fashion Discovery
+- Wishlist
+- Profile Management
+
+---
+
+## 🤖 AI Features
+
+- Personalized Fashion Recommendations
+- Intelligent Outfit Suggestions
+- Style Matching
+- Preference-Based Recommendations
+- Smart Product Discovery
+- AI-assisted Fashion Experience
+
+---
+
+## 🛍️ Shopping Features
+
+- Product Browsing
+- Product Details
+- Category Filtering
+- Search Functionality
+- Wishlist
+- Responsive Product Grid
+
+---
+
+## 🎨 UI / UX
+
+- Modern Landing Page
+- Fully Responsive
+- Smooth Navigation
+- Interactive Components
+- Mobile Friendly
+- Premium Design System
+- Fast User Experience
+
+---
+
+# 🌍 Real-World Applications
+
+VELORA can be adopted by:
+
+- Fashion Brands
+- Clothing Retailers
+- E-commerce Platforms
+- Fashion Startups
+- Lifestyle Applications
+- Personal Styling Services
+
+The platform has the potential to improve customer engagement while reducing product returns through better purchase decisions.
+
+---
+
+# 🚀 Future Scope
+
+The architecture has been designed to support future AI capabilities such as:
+
+- AI Virtual Try-On
+- Image-Based Outfit Generation
+- Computer Vision Integration
+- AR Clothing Preview
+- Brand Marketplace
+- Social Fashion Community
+- AI Fashion Assistant
+- Personalized Shopping Feed
+- Voice-Based Fashion Search
+- Smart Inventory Recommendations
+
+---
+
+# 🛠️ Technology Stack
+
+## Frontend
+
 - React.js
-- Vite
-- Three.js
+- JavaScript
+- HTML5
+- CSS3
+- Tailwind CSS
 
-### Backend
+---
+
+## Backend
+
 - Node.js
 - Express.js
+
+---
+
+## Database
+
 - PostgreSQL
-
-### AI & Integrations
-- OpenAI API
-- Google Gemini API
-
-### Other Tools
-- Cloudinary
-- JWT Authentication
-- Nodemailer
-- Multer
-- Express Validator
-- Helmet
-- Morgan
+- Supabase (Managed PostgreSQL)
 
 ---
 
-## 🎯 What's Coming Next
+## Backend Services
 
-Velora is actively being developed with several exciting features planned, including:
+The application uses **Supabase** as its managed PostgreSQL platform, providing a secure and scalable cloud database for storing user information, product data, wardrobe details, authentication-related records, and application metadata.
 
-- 👕 AI Fashion Assistant
-- ✨ Personalized Outfit Recommendations
-- 🧠 Smart Search & Product Discovery
-- ❤️ Wishlist & Saved Collections
-- 🛒 Shopping Cart & Checkout
-- 📱 Responsive User Experience
-- 📊 Admin Dashboard
-- 📦 Order Management
-- 🔔 Real-time Notifications
-- 📈 Analytics & Insights
+### Services Used
 
----
+- PostgreSQL Database
+- Database Hosting
+- Secure Cloud Infrastructure
+- REST API Support
+- Scalable Data Storage
 
-## 💡 Why Velora?
+## Deployment
 
-The goal isn't just to build another fashion website.
-
-Velora is focused on creating a platform where technology enhances the shopping experience by making fashion discovery more personalized, interactive, and intelligent.
-
-As AI continues to transform how people interact with digital products, Velora aims to be part of that evolution.
+- Vercel
+- Render
 
 ---
 
-## ⚙️ Getting Started
+## Development Tools
 
-### Clone the Repository
+- Git
+- GitHub
+- VS Code
+- npm
 
-```bash
-git clone https://github.com/het-visariya/VELORA_BE.git
+---
+
+# 🏛️ System Architecture
+
+```text
+                User
+                  │
+                  ▼
+        React Frontend (Vercel)
+                  │
+         REST API Requests
+                  │
+                  ▼
+      Node.js + Express Backend
+            (Hosted on Render)
+                  │
+                  ▼
+     PostgreSQL Database (Supabase)
+                  │
+                  ▼
+          Fashion & User Data
+
 ```
 
-### Install Dependencies
+# 📂 Project Structure
+
+```text
+VELORA/
+
+│
+├── client/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── context/
+│   │   ├── services/
+│   │   └── App.jsx
+│
+├── server/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── config/
+│   ├── utils/
+│   └── server.js
+│
+├── README.md
+│
+└── package.json
+```
+
+---
+
+# ⚙️ Getting Started
+
+## Clone the Repository
 
 ```bash
+git clone https://github.com/het-visariya/VELORA.git
+```
+
+Move into the project
+
+```bash
+cd VELORA
+```
+
+---
+
+## Install Frontend
+
+```bash
+cd client
 npm install
 ```
 
-### Configure Environment Variables
-
-Create a `.env` file in the project root and configure the required environment variables.
-
-Example:
-
-```env
-PORT=
-DATABASE_URL=
-JWT_SECRET=
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-EMAIL_USER=
-EMAIL_PASS=
-```
-
-### Run the Development Server
+Start Frontend
 
 ```bash
 npm run dev
 ```
 
-### Production
+---
+
+## Install Backend
 
 ```bash
-npm start
+cd ../server
+npm install
+```
+
+Start Backend
+
+```bash
+npm run dev
 ```
 
 ---
 
-## 📂 Project Status
+## Environment Variables
 
-🚧 This project is currently under active development.
+Create a `.env` file inside the backend directory.
 
-New features, improvements, and optimizations are being added continuously as Velora evolves into a complete AI-powered fashion platform.
+Example:
+
+```env
+DATABASE_URL=YOUR_SUPABASE_POSTGRES_CONNECTION_STRING
+
+SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+
+SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+
+JWT_SECRET=YOUR_SECRET_KEY
+
+CLIENT_URL=http://localhost:5173
+```
+
+*(Add any additional environment variables required by your implementation.)*
 
 ---
 
-## 🤝 Contributing
+# 📱 Responsive Design
 
-Suggestions, ideas, and constructive feedback are always welcome.
+The application is fully responsive and optimized for:
 
-If you'd like to contribute, feel free to fork the repository, create a feature branch, and submit a pull request.
+- ✅ Desktop
+- ✅ Laptop
+- ✅ Tablet
+- ✅ Mobile
 
 ---
 
-## 📬 Connect With Me
+# 📈 Learning Outcomes
+
+This project strengthened my knowledge of:
+
+- Full Stack Development
+- REST API Development
+- Authentication Systems
+- Responsive UI Development
+- Modern React Architecture
+- Backend API Design
+- PostgreSQL Database Design
+- Relational Database Modeling
+- Supabase Integration
+- Client-Server Communication
+- Git Collaboration
+- Cloud Deployment using Vercel & Render
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome!
+
+## Fork the repository
+
+```bash
+git fork https://github.com/het-visariya/VELORA.git
+```
+
+---
+
+## Clone your fork
+
+```bash
+git clone https://github.com/<your-username>/VELORA.git
+```
+
+---
+
+## Create a new branch
+
+```bash
+git checkout -b feature/your-feature
+```
+
+---
+
+## Commit your changes
+
+```bash
+git commit -m "feat: add awesome feature"
+```
+
+---
+
+## Push your branch
+
+```bash
+git push origin feature/your-feature
+```
+
+---
+
+## Open a Pull Request
+
+Describe:
+
+- What you changed
+- Why you changed it
+- Screenshots (if UI changes)
+- Testing performed
+
+---
+
+# 🚀 Deployment
+
+### Frontend
+
+Hosted on **Vercel**
+
+🔗 https://velora-kq5yjjmd9-het-pravin-visariyas-projects.vercel.app/
+
+---
+
+### Backend
+
+Hosted on **Render**
+
+🔗 https://velora-h0r9.onrender.com
+
+---
+
+# 👨‍💻 Developed By
 
 **Het Visariya**
 
-💼 LinkedIn: https://linkedin.com/in/het-visariya
+Computer Engineering Student
 
-💻 GitHub: https://github.com/het-visariya
+Full Stack Developer • AI/ML Enthusiast • MERN Stack Developer
 
-📧 Email: het.visariya21@gmail.com
+GitHub
+
+https://github.com/het-visariya
+
+LinkedIn
+
+https://linkedin.com/in/het-visariya
 
 ---
 
-⭐ If you like this project, consider giving it a star. It motivates me to keep building and improving Velora!
+# ⭐ Support
+
+If you found this project useful or interesting, consider giving it a ⭐ on GitHub!
+
+It helps showcase the project and motivates future improvements.
