@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import woolOvercoatImg from '../assets/wool_overcoat_luxury.png';
 import closetApi from '../api/closet.api';
+import useAuth from './useAuth';
 
 const defaultItems = [
   { id: 1, name: 'Silk Shirt', brand: 'Maison', category: 'Women Tops', season: 'All', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800&auto=format&fit=crop' },
@@ -18,12 +19,12 @@ const defaultItems = [
 ];
 
 export function useCloset() {
+  const { isAuthenticated } = useAuth();
   const [items, setItems] = useState(defaultItems);
   const [nextId, setNextId] = useState(items.length + 1);
   const [loading, setLoading] = useState(false);
 
   const loadItems = async () => {
-    if (!localStorage.getItem('velora_token')) return;
     setLoading(true);
     try {
       const response = await closetApi.getItems();
@@ -35,12 +36,8 @@ export function useCloset() {
     }
   };
 
-  useEffect(() => {
-    loadItems();
-  }, []);
-
   const addItem = async (item) => {
-    if (localStorage.getItem('velora_token')) {
+    if (isAuthenticated) {
       const response = await closetApi.addItem(item);
       const savedItem = response.data;
       setItems((current) => [savedItem, ...current]);

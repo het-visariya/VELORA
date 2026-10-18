@@ -13,6 +13,7 @@ import SignInPage from './pages/SignInPage';
 import { useCloset } from './hooks/useCloset';
 import outfitsApi from './api/outfits.api';
 import plannerApi from './api/planner.api';
+import aiApi from './api/ai.api';
 
 const normalizeOutfit = (outfit) => ({
   ...outfit,
@@ -60,11 +61,14 @@ export default function App() {
     setShowProfile(false);
     setSavedOutfits([]);
     setPlannerEvents([]);
+    setAnalysisData(null);
+    setAnalysisError('');
+    setAnalysisLoading(false);
+    setPendingAnalyzeEmail(null);
     window.scrollTo(0, 0);
   };
 
   const loadSavedOutfits = async () => {
-    if (!localStorage.getItem('velora_token')) return;
     try {
       const response = await outfitsApi.getSaved();
       setSavedOutfits((response.data || []).map(normalizeOutfit));
@@ -74,7 +78,6 @@ export default function App() {
   };
 
   const loadPlannerEvents = async () => {
-    if (!localStorage.getItem('velora_token')) return;
     try {
       const response = await plannerApi.getEvents();
       setPlannerEvents((response.data || []).map(normalizeEvent));
@@ -115,6 +118,51 @@ export default function App() {
     setPlannerEvents((current) => current.filter((event) => event.id !== eventId));
   };
 
+  const [analysisData, setAnalysisData] = useState(null);
+  const [analysisError, setAnalysisError] = useState('');
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [pendingAnalyzeEmail, setPendingAnalyzeEmail] = useState(null);
+
+  const handleAnalyzeStyle = async (email) => {
+    const normalizedEmail = email?.trim() || user?.email?.trim();
+
+    if (!isAuthenticated) {
+      setPendingView('ai');
+      setPendingAnalyzeEmail(normalizedEmail || null);
+      setShowSignIn(true);
+      return;
+    }
+
+    if (!normalizedEmail) {
+      setAnalysisError('Please provide an email address to run your style analysis.');
+      setView('ai');
+      return;
+    }
+
+    setAnalysisLoading(true);
+    setAnalysisError('');
+
+    try {
+      const response = await aiApi.analyzeStyle(normalizedEmail);
+      const data = response.data || response;
+      setAnalysisData(data);
+      setView('ai');
+    } catch (err) {
+      console.error('Failed to analyze style:', err);
+      setAnalysisError(err.message || 'Unable to generate your AI analysis at this time.');
+      setView('ai');
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && pendingAnalyzeEmail) {
+      const pendingEmail = pendingAnalyzeEmail;
+      setPendingAnalyzeEmail(null);
+      handleAnalyzeStyle(pendingEmail);
+    }
+  }, [isAuthenticated, pendingAnalyzeEmail]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -183,7 +231,15 @@ export default function App() {
       case 'calendar':
         return <PlannerPage items={closetItems} savedOutfits={savedOutfits} events={plannerEvents} notice={plannerNotice} onAddEvent={handleAddPlannerEvent} onDeleteEvent={handleDeletePlannerEvent} />;
       case 'ai':
-        return <AISuggestionsPage />;
+        return (
+          <AISuggestionsPage
+            analysis={analysisData}
+            initialEmail={user?.email}
+            onAnalyzeStyle={handleAnalyzeStyle}
+            loading={analysisLoading}
+            error={analysisError}
+          />
+        );
       case 'tryon':
         return <TryOnPage items={closetItems} />;
       default:
@@ -194,7 +250,7 @@ export default function App() {
             onTryonClick={() => handleViewChange('tryon')}
             onEnterStudio={() => handleViewChange('builder')}
             onLaunchScheduler={() => handleViewChange('calendar')}
-            onAnalyzeStyle={() => handleViewChange('ai')}
+            onAnalyzeStyle={handleAnalyzeStyle}
           />
         );
     }
@@ -222,14 +278,15 @@ export default function App() {
 
       {showSignIn && (
         <SignInPage
-          onSignIn={(name, email) => {
-            login(name, email);
+          onSignIn={(signedInUser, token) => {
+            if (!login(signedInUser, token)) return false;
             setShowSignIn(false);
             if (pendingView) {
               setView(pendingView);
               setPendingView(null);
               window.scrollTo(0, 0);
             }
+            return true;
           }}
           onBack={() => {
             setShowSignIn(false);

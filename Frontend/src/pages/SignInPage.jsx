@@ -14,6 +14,12 @@ export default function SignInPage({ onSignIn, onBack }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [strength, setStrength] = useState({ score: 0, label: '', color: '' });
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialProvider, setSocialProvider] = useState(null);
+  const [socialEmail, setSocialEmail] = useState('');
+  const [socialCode, setSocialCode] = useState('');
+  const [socialPhase, setSocialPhase] = useState('entry');
+  const [socialMessage, setSocialMessage] = useState('');
 
   const validatePassword = (pass) => {
     let score = 0;
@@ -53,10 +59,59 @@ export default function SignInPage({ onSignIn, onBack }) {
           ? await authApi.register(name, email, password)
           : await authApi.login(email, password);
         const signedInUser = response.data?.user;
-        onSignIn(signedInUser?.name || name, signedInUser?.email || email);
+        // Pass the token up: AuthContext treats it as the proof of sign-in.
+        if (!onSignIn({ name: name, email: email, ...signedInUser }, response.data?.token)) {
+          setError('Sign-in did not return a usable session. Please try again.');
+        }
       } catch (err) {
         setError(err.message || 'Authentication failed');
       }
+    }
+  };
+
+  const startSocialLogin = (provider) => {
+    setError('');
+    setSocialProvider(provider);
+    setSocialEmail('');
+    setSocialCode('');
+    setSocialPhase('entry');
+    setSocialMessage('');
+  };
+
+  const sendSocialCode = async () => {
+    setError('');
+    setSocialLoading(true);
+
+    try {
+      const response = socialProvider === 'google'
+        ? await authApi.sendGoogleCode(socialEmail)
+        : await authApi.sendAppleCode(socialEmail);
+      const message = response.message || `Code sent to ${socialEmail}`;
+      setSocialMessage(response.debugCode
+        ? `${message} Debug code: ${response.debugCode}`
+        : message);
+      setSocialPhase('verify');
+    } catch (err) {
+      setError(err.message || 'Unable to send confirmation code');
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+  const verifySocialLoginCode = async () => {
+    setError('');
+    setSocialLoading(true);
+
+    try {
+      const response = await authApi.verifySocialCode(socialProvider, socialEmail, socialCode);
+      const signedInUser = response.data?.user;
+      if (!onSignIn({ email: socialEmail, ...signedInUser }, response.data?.token)) {
+        setError('Sign-in did not return a usable session. Please try again.');
+      }
+    } catch (err) {
+      setError(err.message || 'Invalid confirmation code');
+    } finally {
+      setSocialLoading(false);
     }
   };
 
@@ -188,22 +243,101 @@ export default function SignInPage({ onSignIn, onBack }) {
             </form>
 
             <div className="mt-12 pt-8 border-t border-white/5 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
-              <div className="flex flex-col items-center gap-6">
-                <div className="flex gap-10">
-                  <button className="hover:scale-110 transition-transform" aria-label="Google">
-                    <Icon icon="logos:google-icon" style={{ fontSize: '1.2rem' }} />
-                  </button>
-                  <button className="hover:scale-110 transition-transform" aria-label="Apple">
-                    <Icon icon="logos:apple" style={{ fontSize: '1.2rem' }} className="filter brightness-0 invert" />
-                  </button>
-                </div>
-                
+              <div className="space-y-6">
+                {!socialProvider ? (
+                  <>
+                    <p className="text-[0.55rem] tracking-[0.3em] uppercase text-neutral-500 text-center">Or sign in with</p>
+                    <div className="grid gap-4">
+                      <button
+                        type="button"
+                        onClick={() => startSocialLogin('google')}
+                        className="flex items-center justify-center gap-3 w-full bg-white/10 border border-white/10 text-white py-3 rounded-xl uppercase tracking-[0.35em] text-[0.65rem] hover:bg-white/15 transition-all"
+                      >
+                        <Icon icon="logos:google-icon" style={{ fontSize: '1.2rem' }} />
+                        Continue with Google
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startSocialLogin('apple')}
+                        className="flex items-center justify-center gap-3 w-full bg-white/10 border border-white/10 text-white py-3 rounded-xl uppercase tracking-[0.35em] text-[0.65rem] hover:bg-white/15 transition-all"
+                      >
+                        <Icon icon="logos:apple" style={{ fontSize: '1.2rem' }} className="filter brightness-0 invert" />
+                        Continue with Apple
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <p className="text-[0.55rem] tracking-[0.3em] uppercase text-neutral-400">Continue with {socialProvider === 'google' ? 'Google' : 'Apple'}</p>
+                      <p className="mt-3 text-sm text-neutral-400">Enter the email to which we should send your confirmation code.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="block text-[0.55rem] uppercase tracking-[0.3em] text-neutral-500">Email address</label>
+                      <input
+                        type="email"
+                        value={socialEmail}
+                        onChange={(e) => setSocialEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full bg-transparent border border-white/10 px-4 py-3 text-sm text-white placeholder-neutral-500 rounded-xl focus:outline-none focus:border-white/40 transition-all"
+                        disabled={socialPhase === 'verify'}
+                      />
+
+                      {socialPhase === 'verify' && (
+                        <>
+                          <label className="block text-[0.55rem] uppercase tracking-[0.3em] text-neutral-500">Confirmation code</label>
+                          <input
+                            type="text"
+                            value={socialCode}
+                            onChange={(e) => setSocialCode(e.target.value)}
+                            placeholder="123456"
+                            className="w-full bg-transparent border border-white/10 px-4 py-3 text-sm text-white placeholder-neutral-500 rounded-xl focus:outline-none focus:border-white/40 transition-all"
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={socialPhase === 'entry' ? sendSocialCode : verifySocialLoginCode}
+                      disabled={socialLoading || !socialEmail || (socialPhase === 'verify' && !socialCode)}
+                      className="w-full bg-white text-black py-3 text-[0.65rem] font-semibold uppercase rounded-xl hover:bg-neutral-200 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {socialLoading
+                        ? 'Processing…'
+                        : socialPhase === 'entry'
+                          ? `Send code to ${socialProvider === 'google' ? 'Google' : 'Apple'} email`
+                          : `Verify ${socialProvider === 'google' ? 'Google' : 'Apple'} code`}
+                    </button>
+
+                    {socialMessage && (
+                      <div className="text-sm text-emerald-300 text-center">{socialMessage}</div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSocialProvider(null);
+                        setSocialEmail('');
+                        setSocialCode('');
+                        setSocialPhase('entry');
+                        setSocialMessage('');
+                        setError('');
+                      }}
+                      className="w-full text-[0.55rem] tracking-[0.4em] text-neutral-500 hover:text-white transition-all uppercase border-b border-transparent hover:border-white/20 pb-1"
+                    >
+                      Cancel social sign in
+                    </button>
+                  </div>
+                )}
+
                 <button 
                   onClick={() => {
                     setIsSignUp(!isSignUp);
                     setError('');
                   }}
-                  className="text-[0.55rem] tracking-[0.4em] text-neutral-500 hover:text-white transition-all uppercase border-b border-transparent hover:border-white/20 pb-1"
+                  className="w-full text-[0.55rem] tracking-[0.4em] text-neutral-500 hover:text-white transition-all uppercase border-b border-transparent hover:border-white/20 pb-1"
                 >
                   {isSignUp ? 'ALREADY REGISTERED?' : 'NEW ARCHIVE MEMBER?'}
                 </button>

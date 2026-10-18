@@ -4,11 +4,14 @@ backend/node_modules/
 Frontend/node_modules/
 
 # === Environment & Secrets ===
+# Ignore every .env variant anywhere (.env, .env.local, .env.bak, .env.production...)
+# and then re-admit only the committed templates.
 .env
-backend/.env
-Frontend/.env
-backend/.env.local
-Frontend/.env.local
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 
 # === Build Output ===
 dist/
