@@ -8,12 +8,17 @@
     "dev:api": "npm --prefix backend run dev",
     "dev:web": "npm --prefix Frontend run dev",
     "build": "npm --prefix Frontend run build",
+    "build:models": "node scripts/build-models.mjs",
     "start": "npm --prefix backend run start",
     "migrate": "npm --prefix backend run migrate",
     "setup": "npm install && npm --prefix backend install && npm --prefix Frontend install"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@gltf-transform/core": "^4.1.1",
+    "@gltf-transform/extensions": "^4.1.1",
+    "@gltf-transform/functions": "^4.1.1",
+    "concurrently": "^9.1.2",
+    "sharp": "^0.33.5"
   },
   "engines": {
     "node": ">=20"
