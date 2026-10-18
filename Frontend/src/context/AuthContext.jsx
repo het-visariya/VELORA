@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import { UNAUTHORIZED_EVENT } from '../api/client';
 import {
   TOKEN_KEY,
   clearAuthStorage,
@@ -14,13 +15,6 @@ import {
 export const AuthContext = createContext(null);
 
 const EMPTY_USER = { name: '', email: '', profileImage: '' };
-
-/**
- * Event dispatched by src/api/client.js when the API rejects a request with
- * 401, so an expired or revoked token signs the user out instead of leaving
- * the UI in a signed-in state that every request fails.
- */
-export const UNAUTHORIZED_EVENT = 'velora:unauthorized';
 
 /** Build the user shape the UI expects, preferring the server's own fields. */
 function toUser(serverUser, token) {
