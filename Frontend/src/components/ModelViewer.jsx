@@ -1,281 +1,361 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-export default function ModelViewer({ modelUrl, resetSignal = 0 }) {
+import { loadBodyModel } from '../three/loadBodyModel';
+
+/**
+ * Body viewer.
+ *
+ * Renders on demand rather than every frame: a still body on a still camera
+ * costs nothing, which matters on a phone. Anything that changes the picture
+ * calls invalidate().
+ */
+
+const BACKGROUND = 0x0a0a0a;
+const GOLD = 0xc5a880;
+
+/** Does this browser have a usable WebGL context at all? */
+function webglAvailable() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext
+      && (canvas.getContext('webgl2') || canvas.getContext('webgl')),
+    );
+  } catch {
+    return false;
+  }
+}
+
+export default function ModelViewer({
+  modelUrl,
+  gender = 'male',
+  resetSignal = 0,
+  onReady,
+  onError,
+}) {
   const mountRef = useRef(null);
-  const controlsRef = useRef(null);
+  const apiRef = useRef(null);
+
+  // Held in refs and kept out of the effect's dependencies. A parent that
+  // passes an inline arrow would otherwise change identity on every render and
+  // tear down and rebuild the entire WebGL scene each time.
+  const onReadyRef = useRef(onReady);
+  const onErrorRef = useRef(onError);
+  onReadyRef.current = onReady;
+  onErrorRef.current = onError;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [supported] = useState(() => webglAvailable());
 
   useEffect(() => {
-    if (!mountRef.current || !modelUrl) return;
+    if (!supported || !mountRef.current || !modelUrl) return undefined;
+
+    const mount = mountRef.current;
+    let disposed = false;
 
     setLoading(true);
     setError(null);
-    
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
 
-    // Scene setup - dark luxury background
+    const width = mount.clientWidth || 1;
+    const height = mount.clientHeight || 1;
+
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a0a);
+    scene.background = new THREE.Color(BACKGROUND);
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 1.35, 2.75);
+    // Narrow-ish fov: a fashion figure at 35 degrees reads with much less
+    // perspective distortion than the 45 the placeholder used.
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.05, 50);
 
-    // Renderer with explicit dimensions
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
       alpha: false,
-      powerPreference: "high-performance"
+      powerPreference: 'high-performance',
     });
-    renderer.setClearColor(0x0a0a0a, 1);
+    renderer.setClearColor(BACKGROUND, 1);
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
-    renderer.shadowMap.enabled = false;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    mountRef.current.appendChild(renderer.domElement);
+    mount.appendChild(renderer.domElement);
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.touchAction = 'pan-y';
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
+    // ---- lighting: the existing luxury rig, re-aimed for a floor at y=0 ----
+    scene.add(new THREE.HemisphereLight(0xfff8ef, 0x2c241f, 1.1));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
-    const hemisphereLight = new THREE.HemisphereLight(0xfff8ef, 0x2c241f, 1.2);
-    scene.add(hemisphereLight);
-
-    const keyLight = new THREE.DirectionalLight(0xfff5e0, 3);
-    keyLight.position.set(2, 5, 3);
+    const keyLight = new THREE.DirectionalLight(0xfff5e0, 2.6);
+    keyLight.position.set(1.6, 3.2, 2.4);
     keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 10;
+    keyLight.shadow.camera.left = -1.5;
+    keyLight.shadow.camera.right = 1.5;
+    keyLight.shadow.camera.top = 2.6;
+    keyLight.shadow.camera.bottom = -0.2;
+    keyLight.shadow.bias = -0.0005;
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xC5A880, 1);
-    rimLight.position.set(-3, 2, -2);
+    const rimLight = new THREE.DirectionalLight(GOLD, 1.1);
+    rimLight.position.set(-2.4, 1.8, -1.8);
     scene.add(rimLight);
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 1.1);
-    fillLight.position.set(0, 3, -4);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    fillLight.position.set(0, 1.8, -2.6);
     scene.add(fillLight);
 
-    const frontLight = new THREE.PointLight(0xffffff, 1.6, 12);
-    frontLight.position.set(0, 2.2, 3.2);
+    const frontLight = new THREE.PointLight(0xffffff, 2.2, 8);
+    frontLight.position.set(0, 1.5, 2.2);
     scene.add(frontLight);
 
-    const topSpot = new THREE.SpotLight(0xfff3df, 2.8, 14, Math.PI / 5, 0.45, 1);
-    topSpot.position.set(1.5, 6, 2.5);
-    topSpot.target.position.set(0, 0.8, 0);
-    scene.add(topSpot);
-    scene.add(topSpot.target);
-
+    // ---- floor, at the model's feet ----
     const stage = new THREE.Mesh(
-      new THREE.CircleGeometry(2.25, 64),
-      new THREE.MeshStandardMaterial({
-        color: 0x050505,
-        roughness: 1,
-        metalness: 0
-      })
+      new THREE.CircleGeometry(1.6, 64),
+      new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 1, metalness: 0 }),
     );
     stage.rotation.x = -Math.PI / 2;
-    stage.position.y = -1.25;
+    stage.position.y = 0;
+    stage.receiveShadow = true;
     scene.add(stage);
 
-    // OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.8;
+    // Panning lets the user lose the model with no way back.
+    controls.enablePan = false;
     controls.enableZoom = true;
-    controls.minDistance = 1.5;
-    controls.maxDistance = 5;
-    controls.minPolarAngle = Math.PI / 6;
-    controls.maxPolarAngle = Math.PI / 1.8;
-    controls.target.set(0, 1, 0);
-    controls.update();
-    controlsRef.current = controls;
+    // Keep the camera near eye level: looking up from the floor or straight
+    // down on the scalp are both unflattering and show the mesh's worst seams.
+    controls.minPolarAngle = Math.PI / 3;
+    controls.maxPolarAngle = Math.PI / 1.85;
 
-    // Test cube - shows Three.js is working
-    const testCube = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.6, 0.6),
-      new THREE.MeshStandardMaterial({ 
-        color: 0xC5A880,
-        roughness: 0.2,
-        metalness: 0.8,
-        emissive: 0xC5A880,
-        emissiveIntensity: 0.3
-      })
-    );
-    testCube.position.set(0, 1, 0);
-    scene.add(testCube);
+    let animFrame = null;
+    let needsRender = true;
 
-    // Load FBX model
-    const loadingManager = new THREE.LoadingManager();
-    const loader = new FBXLoader(loadingManager);
-    
-    loader.load(
-      modelUrl,
-      (object) => {
-        fbxLoaded = true;
-        // Remove test cube when FBX loads
-        scene.remove(testCube);
-        testCube.geometry.dispose();
-        testCube.material.dispose();
+    /** Ask for one more frame. */
+    const invalidate = () => {
+      needsRender = true;
+    };
 
-        // Auto-center and scale model to fit viewport
-        const box = new THREE.Box3().setFromObject(object);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = maxDim > 0 ? 2.2 / maxDim : 1;
-        object.scale.setScalar(scale);
-        object.position.sub(center.multiplyScalar(scale));
-        object.position.y += 0.15;
+    controls.addEventListener('change', invalidate);
 
-        // Material enhancement
-        object.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            const materials = Array.isArray(child.material) ? child.material : [child.material];
-            materials.forEach((material) => {
-              if (!material) return;
-              if (material.color) {
-                material.color.convertSRGBToLinear();
-              }
-              if (material.emissive && material.emissiveIntensity) {
-                material.emissiveIntensity *= 0.1;
-              }
-            });
-          }
-        });
+    // ---- model ----
+    let body = null;
 
-        scene.add(object);
-        setLoading(false);
+    const frameModel = (modelHeight) => {
+      const target = new THREE.Vector3(0, modelHeight * 0.5, 0);
+      // Distance that fits the full height in a 35 degree vertical fov, with
+      // a little headroom.
+      const fitDistance = (modelHeight * 0.5) / Math.tan((camera.fov * Math.PI) / 360);
+      const distance = fitDistance * 1.25;
 
-        // FBX files may have embedded animations as AnimationStacks
-        if (object.animations && object.animations.length > 0) {
-          mixer = new THREE.AnimationMixer(object);
-          const idleClip = object.animations[0];
-          const action = mixer.clipAction(idleClip);
-          action.play();
-        }
-      },
-      (progress) => {
-        if (progress.total > 0) {
-          const percent = (progress.loaded / progress.total * 100).toFixed(0);
-          console.log(`Loading FBX: ${percent}%`);
-        }
-      },
-      (error) => {
-        console.error('FBX load error:', error);
-        setError('Could not load 3D model. Using test preview.');
-        setLoading(false);
-      }
-    );
-
-    // Animation loop
-    const clock = new THREE.Clock();
-    let animFrameId;
-    let fbxLoaded = false;
-    const animate = () => {
-      animFrameId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
-      // Rotate test cube if FBX hasn't loaded yet
-      if (!fbxLoaded && testCube) {
-        testCube.rotation.y += delta * 0.8;
-        testCube.rotation.x += delta * 0.3;
-      }
+      camera.position.set(0, modelHeight * 0.58, distance);
+      controls.target.copy(target);
+      controls.minDistance = distance * 0.45;
+      controls.maxDistance = distance * 2.2;
       controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
 
-    // Resize handler
-    const handleResize = () => {
-      if (!mountRef.current) return;
-      const w = mountRef.current.clientWidth;
-      const h = mountRef.current.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      return { target, distance };
     };
-    window.addEventListener('resize', handleResize);
 
-    // Cleanup
-    return () => {
-      cancelAnimationFrame(animFrameId);
-      window.removeEventListener('resize', handleResize);
-      controls.dispose();
-      controlsRef.current = null;
-      scene.traverse((child) => {
-        if (!child.isMesh) return;
-        child.geometry?.dispose();
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        materials.forEach((material) => {
-          if (!material) return;
-          Object.values(material).forEach((value) => {
-            if (value?.isTexture) value.dispose();
-          });
+    // A single object the component holds a reference to throughout. The load
+    // below completes after this effect body has returned, so assigning a new
+    // object there would silently drop resetView.
+    const api = {
+      invalidate,
+      mesh: null,
+      material: null,
+      modelHeight: null,
+      resetView: null,
+    };
+    apiRef.current = api;
+
+    loadBodyModel(modelUrl, gender)
+      .then(({ geometry, material, height: modelHeight }) => {
+        if (disposed) {
+          geometry.dispose();
           material.dispose();
-        });
+          return;
+        }
+
+        material.side = THREE.FrontSide;
+
+        body = new THREE.Mesh(geometry, material);
+        body.castShadow = true;
+        body.receiveShadow = false;
+        // Required once the vertex shader moves vertices: three.js culls
+        // against the ORIGINAL bounding sphere, which never learns about the
+        // deformation, so a stretched body would pop out of view at the edges.
+        body.frustumCulled = false;
+        scene.add(body);
+
+        frameModel(modelHeight);
+
+        api.mesh = body;
+        api.material = material;
+        api.modelHeight = modelHeight;
+        api.resetView = () => {
+          frameModel(modelHeight);
+          invalidate();
+        };
+
+        setLoading(false);
+        invalidate();
+        onReadyRef.current?.({ mesh: body, material, modelHeight, invalidate });
+      })
+      .catch((err) => {
+        if (disposed) return;
+        console.error('[velora] model load failed:', err);
+        const message = 'Could not load the 3D model.';
+        setError(message);
+        setLoading(false);
+        onErrorRef.current?.(err);
       });
-      renderer.dispose();
+
+    // ---- render loop: only works when something changed ----
+    const tick = () => {
+      animFrame = requestAnimationFrame(tick);
+
+      // Damping eases the camera over several frames after input stops, so
+      // keep rendering while it is still settling.
+      const damping = controls.update();
+      if (damping) needsRender = true;
+
+      if (needsRender) {
+        needsRender = false;
+        renderer.render(scene, camera);
+      }
+    };
+    tick();
+
+    // ---- resize ----
+    const resize = () => {
+      if (!mount.clientWidth || !mount.clientHeight) return;
+      camera.aspect = mount.clientWidth / mount.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mount.clientWidth, mount.clientHeight);
+      invalidate();
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(mount);
+
+    // ---- context loss ----
+    const onContextLost = (event) => {
+      event.preventDefault();
+      cancelAnimationFrame(animFrame);
+      setError('The 3D view lost its graphics context. Reload to try again.');
+    };
+    const onContextRestored = () => {
+      setError(null);
+      invalidate();
+      tick();
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored);
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(animFrame);
+      observer.disconnect();
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
+      controls.removeEventListener('change', invalidate);
+      controls.dispose();
+
+      if (body) {
+        scene.remove(body);
+        body.geometry.dispose();
+        // Dispose only the maps this material owns. The source texture is
+        // shared with the model cache by reference, so it is deliberately not
+        // disposed here - the next mount reuses it.
+        body.material.dispose();
+        if (body.customDepthMaterial) body.customDepthMaterial.dispose();
+      }
+
       stage.geometry.dispose();
       stage.material.dispose();
-      if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
-    };
-  }, [modelUrl]);
 
+      renderer.dispose();
+      if (renderer.domElement.parentNode === mount) {
+        mount.removeChild(renderer.domElement);
+      }
+      apiRef.current = null;
+    };
+  }, [modelUrl, gender, supported]);
+
+  // Reset View button.
   useEffect(() => {
-    if (!controlsRef.current) return;
-    controlsRef.current.reset();
-    controlsRef.current.target.set(0, 1, 0);
-    controlsRef.current.update();
+    if (resetSignal === 0) return;
+    apiRef.current?.resetView?.();
+    apiRef.current?.invalidate?.();
   }, [resetSignal]);
+
+  if (!supported) {
+    return (
+      <div style={overlayStyle}>
+        <p style={{ fontSize: 12, color: '#bbb', textAlign: 'center', maxWidth: 280 }}>
+          This browser cannot display the 3D preview because WebGL is unavailable.
+          Try a different browser, or enable hardware acceleration.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div ref={mountRef} style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-      {loading && (
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
-          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.3)', zIndex: 10
-        }}>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <div style={{
-            width: 50, height: 50, borderRadius: '50%',
-            border: '3px solid rgba(197,168,128,0.3)',
-            borderTopColor: '#C5A880',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <p style={{ marginTop: 16, fontSize: 11, letterSpacing: '0.25em',
-            textTransform: 'uppercase', color: '#888' }}>
-            Loading 3D Model
-          </p>
+      {loading && !error && (
+        <div style={overlayStyle}>
+          <style>{'@keyframes velora-spin { to { transform: rotate(360deg); } }'}</style>
+          <div
+            style={{
+              width: 50,
+              height: 50,
+              borderRadius: '50%',
+              border: '3px solid rgba(197,168,128,0.3)',
+              borderTopColor: '#C5A880',
+              animation: 'velora-spin 0.8s linear infinite',
+            }}
+          />
+          <p style={labelStyle}>Loading 3D model</p>
         </div>
       )}
       {error && (
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
-          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', zIndex: 20
-        }}>
-          <p style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 8 }}>
+        <div style={{ ...overlayStyle, background: 'rgba(0,0,0,0.6)', zIndex: 20 }}>
+          <p style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 8, textAlign: 'center' }}>
             {error}
           </p>
           <p style={{ fontSize: 10, color: '#888' }}>
-            Check console for details
+            If this persists, the models may not be built on the server.
           </p>
         </div>
       )}
     </div>
   );
 }
+
+const overlayStyle = {
+  position: 'absolute',
+  inset: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'rgba(0,0,0,0.35)',
+  zIndex: 10,
+  pointerEvents: 'none',
+};
+
+const labelStyle = {
+  marginTop: 16,
+  fontSize: 11,
+  letterSpacing: '0.25em',
+  textTransform: 'uppercase',
+  color: '#888',
+};

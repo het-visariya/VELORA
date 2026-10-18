@@ -19,11 +19,6 @@ export async function getSuggestions(req, res, next) {
 
 export async function analyzeStyleHandler(req, res, next) {
   try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required', code: 'VALIDATION_ERROR' });
-    }
-
     const closetResult = await getClosetItems(req.user.userId);
     const eventsResult = await getPlannerEvents(req.user.userId);
     const outfitsResult = await getOutfits(req.user.userId);
@@ -34,7 +29,6 @@ export async function analyzeStyleHandler(req, res, next) {
       outfitsResult.rows
     );
 
-    // Cache the analysis results
     if (analysis.suggestions && analysis.suggestions.length > 0) {
       await saveSuggestions(req.user.userId, analysis.suggestions, 'analyze');
     }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { register, login, googleOAuth, appleOAuth } from '../controllers/auth.controller.js';
+import { register, login, googleOAuth, appleOAuth, verifySocialCode } from '../controllers/auth.controller.js';
 
 const router = Router();
 
@@ -16,5 +16,6 @@ router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
 router.post('/google', googleOAuth);
 router.post('/apple', appleOAuth);
+router.post('/verify', verifySocialCode);
 
 export default router;

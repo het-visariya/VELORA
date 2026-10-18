@@ -1,27 +1,49 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import Icon from '../components/Icon';
-import ModelViewer from '../components/ModelViewer';
-import { saveTryOnSession } from '../api/tryon.api';
+import { saveTryOnSession, getModelUrls } from '../api/tryon.api';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
-const toAssetUrl = (url) => url?.startsWith('/') ? `${API_BASE}${url}` : url;
+// three.js is ~600 KB and is only ever needed on this page, so it must not sit
+// in the entry chunk that the homepage pays for. Split out, it is fetched when
+// a gender is picked - by which point the user has signalled intent.
+const ModelViewer = lazy(() => import('../components/ModelViewer'));
 
-const modelUrlForGender = (gender) => {
-  if (gender === 'male') return '/models/boy3D.fbx';
-  if (gender === 'female') return '/models/girl3D.fbx';
-  return null;
+/** Phones get the 1024-texture build; it is ~0.2 MB lighter and far cheaper to sample. */
+const prefersLightModel = () => {
+  if (typeof window === 'undefined') return false;
+  const smallScreen = window.matchMedia?.('(max-width: 768px)')?.matches ?? false;
+  const fewCores = (navigator.hardwareConcurrency ?? 8) <= 4;
+  return smallScreen || fewCores;
 };
 
 const slotForCategory = (category = '') => {
   const normalized = category.toLowerCase();
-  if (normalized.includes('bottom')) return 'Bottoms';
-  if (normalized.includes('accessor') || normalized.includes('shoe')) return 'Footwear';
+  if (normalized.includes('bottom') || normalized.includes('trouser') || normalized.includes('jean')) {
+    return 'Bottoms';
+  }
+  // Footwear only. This used to also match 'accessor', which put bags and
+  // jewellery on the feet slot and let one of them evict a pair of shoes.
+  if (normalized.includes('shoe') || normalized.includes('boot') || normalized.includes('footwear')) {
+    return 'Footwear';
+  }
+  if (normalized.includes('accessor') || normalized.includes('bag') || normalized.includes('jewel')) {
+    return 'Accessories';
+  }
   if (normalized.includes('dress') || normalized.includes('jumpsuit')) return 'Full Body';
   return 'Tops';
 };
 
+function ViewerFallback({ label }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center text-center p-8">
+      <p className="text-[0.65rem] tracking-[0.3em] uppercase text-neutral-600">{label}</p>
+    </div>
+  );
+}
+
 export default function TryOnPage({ items }) {
   const [userGender, setUserGender] = useState('');
+  const [modelUrls, setModelUrls] = useState(null);
+  const [modelError, setModelError] = useState('');
   const [formData, setFormData] = useState({
     heightCm: '',
     weight: '',
@@ -34,7 +56,6 @@ export default function TryOnPage({ items }) {
   const [saving, setSaving] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
 
-  const modelUrl = toAssetUrl(modelUrlForGender(userGender));
   const selectedItems = useMemo(() => Object.values(selectedBySlot).filter(Boolean), [selectedBySlot]);
   const groupedItems = useMemo(() => {
     return items.reduce((groups, item) => {
@@ -45,15 +66,41 @@ export default function TryOnPage({ items }) {
     }, {});
   }, [items]);
 
+  // The manifest lives behind GET /tryon/models, which already existed and had
+  // never been called. Fetched once, not per gender switch.
+  useEffect(() => {
+    let cancelled = false;
+    getModelUrls()
+      .then((response) => {
+        if (cancelled) return;
+        setModelUrls(response.data || null);
+        setModelError('');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setModelError(err.message || 'Could not reach the 3D model service.');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const activeModelUrl = useMemo(() => {
+    if (!userGender || !modelUrls) return null;
+    const variants = modelUrls[userGender];
+    if (!variants) return null;
+    return prefersLightModel() ? variants.mobile : variants.standard;
+  }, [userGender, modelUrls]);
+
   const skinTones = ['Fair', 'Light', 'Medium', 'Olive', 'Tan', 'Wheatish', 'Brown', 'Dusky', 'Dark', 'Deep'];
-  const closetSlots = ['Tops', 'Bottoms', 'Footwear', 'Full Body'];
+  const closetSlots = ['Tops', 'Bottoms', 'Footwear', 'Full Body', 'Accessories'];
 
   const selectGender = (gender) => {
     setUserGender(gender);
-    const url = toAssetUrl(modelUrlForGender(gender));
-    console.log(`[3D Turn] Gender selected: ${gender}, Model URL: ${url}`);
-    setMessage(`${gender === 'male' ? 'Boy' : 'Girl'} 3D model selected. Loading...`);
+    setMessage('');
   };
+
+  const handleModelError = useCallback(() => {
+    setModelError('The 3D model could not be loaded.');
+  }, []);
 
   const selectClosetItem = (item) => {
     const slot = slotForCategory(item.category);
@@ -197,7 +244,7 @@ export default function TryOnPage({ items }) {
               <div>
                 <span className="text-[0.5rem] font-bold tracking-[0.35em] uppercase text-neutral-500 block mb-1">3D Turn</span>
                 <p className="text-xs uppercase tracking-[0.25em] text-neutral-300">
-                  {userGender ? `${userGender === 'male' ? 'Boy' : 'Girl'} 3D model active` : 'Select boy or girl 3D virtual'}
+                  {userGender ? `${userGender === 'male' ? 'Boy' : 'Girl'} 3D model` : 'Select boy or girl'}
                 </p>
               </div>
               <button
@@ -209,13 +256,32 @@ export default function TryOnPage({ items }) {
               </button>
             </div>
 
-            {modelUrl ? (
-              <ModelViewer key={modelUrl} modelUrl={modelUrl} resetSignal={resetSignal} />
+            {userGender ? (
+              <div className="absolute inset-0">
+                {activeModelUrl ? (
+                  <Suspense fallback={<ViewerFallback label="Loading 3D engine" />}>
+                    <ModelViewer
+                      modelUrl={activeModelUrl}
+                      gender={userGender}
+                      resetSignal={resetSignal}
+                      onError={handleModelError}
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-center p-8">
+                    <p className="text-[0.65rem] tracking-[0.3em] uppercase text-neutral-600">
+                      {modelError || 'Preparing the 3D model'}
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-center p-8">
                 <div>
                   <Icon icon="solar:user-bold" className="text-neutral-800 text-7xl mb-5 mx-auto" />
-                  <p className="text-[0.65rem] tracking-[0.4em] uppercase text-neutral-600 font-medium">Your 3D model will appear here</p>
+                  <p className="text-[0.65rem] tracking-[0.4em] uppercase text-neutral-600 font-medium">
+                    Select him or her to begin
+                  </p>
                 </div>
               </div>
             )}
@@ -230,9 +296,11 @@ export default function TryOnPage({ items }) {
                   ))}
                 </div>
               )}
-              {message && (
-                <div className="border border-[#C5A880]/30 bg-black/70 px-4 py-3 text-[0.55rem] font-bold tracking-[0.2em] uppercase text-[#C5A880]">
-                  {message}
+              {(message || modelError) && (
+                <div className={`border bg-black/70 px-4 py-3 text-[0.55rem] font-bold tracking-[0.2em] uppercase ${
+                  modelError ? 'border-red-500/30 text-red-400' : 'border-[#C5A880]/30 text-[#C5A880]'
+                }`}>
+                  {modelError || message}
                 </div>
               )}
             </div>
