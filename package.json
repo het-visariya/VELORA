@@ -1,0 +1,21 @@
+{
+  "name": "velora",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Velora - AI-powered luxury fashion platform with 3D virtual try-on",
+  "scripts": {
+    "dev": "concurrently --names \"api,web\" --prefix-colors \"magenta,cyan\" --kill-others-on-fail \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build",
+    "start": "npm --prefix backend run start",
+    "migrate": "npm --prefix backend run migrate",
+    "setup": "npm install && npm --prefix backend install && npm --prefix Frontend install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

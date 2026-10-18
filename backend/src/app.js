@@ -12,6 +12,7 @@ import plannerRoutes from './routes/planner.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import tryonRoutes from './routes/tryon.routes.js';
+import pool from './config/db.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 
@@ -67,6 +68,18 @@ app.options('/models/*', (req, res) => {
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Public routes
+// Liveness + database reachability. Public: deployment probes have no token.
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ success: true, data: { status: 'ok', db: 'up' } });
+  } catch (err) {
+    // The reason is logged, not returned: it carries the DB host and user.
+    console.error('[VELORA HEALTH] database unreachable:', err.message);
+    res.status(503).json({ success: false, message: 'Database unreachable', code: 'DB_UNAVAILABLE' });
+  }
+});
+
 app.use('/auth', authRoutes);
 
 // Protected routes
